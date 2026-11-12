@@ -1,7 +1,26 @@
-import numpy as np
-from matplotlib import pyplot as plt
+import sys
+import os
 
-from openfc import (
+# Add the source directory to sys.path when running from the repository.
+SOURCE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
+if SOURCE_DIR not in sys.path:
+    sys.path.insert(0, SOURCE_DIR)
+
+# Use a writable matplotlib config dir and a non-interactive backend when
+# running without a display server.
+if "MPLCONFIGDIR" not in os.environ:
+    os.environ["MPLCONFIGDIR"] = os.path.join("/tmp", "matplotlib")
+    os.makedirs(os.environ["MPLCONFIGDIR"], exist_ok=True)
+
+HEADLESS = not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+if HEADLESS and "MPLBACKEND" not in os.environ:
+    os.environ["MPLBACKEND"] = "Agg"
+
+import matplotlib  # noqa: E402
+import numpy as np  # noqa: E402
+from matplotlib import pyplot as plt  # noqa: E402
+
+from openfc import (  # noqa: E402
     BreedingBlanket,
     Component,
     ComponentMap,
@@ -164,7 +183,14 @@ for i, (color, linestyle) in enumerate(combinations):
     ax.loglog(t, np.array(y)[:,i], color=color, linestyle=linestyle)
 # ax.loglog(t, y)
 ax.legend(component_map.components.keys())
-plt.show()
+fig.tight_layout()
+
+if HEADLESS or matplotlib.get_backend().lower() == "agg":
+    output_path = os.path.join(os.path.dirname(__file__), "fuelCycle.png")
+    fig.savefig(output_path, dpi=150, bbox_inches="tight")
+    print(f"Saved plot to {output_path}")
+else:
+    plt.show()
 print(f"Component inventories: {component_map.components.keys()}: {y[-1]}\n")
 
 for component in component_map.components.values():
